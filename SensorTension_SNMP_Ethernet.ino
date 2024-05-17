@@ -1,29 +1,33 @@
+/*----------------------SENSOR DE TENSIÓN IoT-----------------
+*
+*      * Medición de tensión alterna
+*      * Conexión Ethernet
+*      * Comunicación SNMP
+*
+* Desarrollado por Marcos Martinez y Nahuel Oggioni - Mayo 2024
+*
+* ver archivo de configuración "NetConfig.h"
+*/
+
 #include <SPI.h>
 #include <EthernetENC.h>
 #include <EthernetUdp.h>
 #include <SNMP_Agent.h>
 
-#include <ZMPT101B.h>
-#define SENSITIVITY 500 //Sensibilidad, calibrar con ejemplo en librería
-#define Vpin 34
-ZMPT101B voltageSensor(Vpin, 50); // (GPIO Pin, Frecuencia de red)
+// Archivos Locales
+#include "NetConfig.h"
 
+// Configuración de sensor de tensión
+#include <ZMPT101B.h> // Modelo del sensor
+#define SENSITIVITY 500 //Sensibilidad
+#define Vpin 34 // GPIO pin ESP32
+ZMPT101B voltageSensor(Vpin, 50); // (GPIO Pin, Frecuencia de red en Hz)
 
-//ETHERNET
-// Enter a MAC address for your controller below.
-byte mac[] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0x01 };
- 
-// Set the static IP address to use if the DHCP fails to assign
-#define MYIPADDR 192,168,0,28
-#define MYIPMASK 255,255,255,0
-#define MYDNS 192,168,0,1
-#define MYGW 192,168,0,1
- 
-// Initialize the Ethernet client library
+// Inicializa libreria de cliente Ethernet
 EthernetClient client;
 EthernetUDP Udp;
 
-//SNMP
+// Agente SNMP
 SNMPAgent snmp = SNMPAgent("public", "private");
 
 // If we want to change the functionaality of an OID callback later, store them here.
@@ -31,62 +35,64 @@ TimestampCallback* timestampCallbackOID;
 
 //std::string staticString = "ESP32 SNMP funcionando correctamente"; // String estática
 
-  int voltage;
-  int CoreTemp;
+// Variable a medir
+int voltage; // Tensión AC
+int CoreTemp; // Temperatura interna ESP
 
-  unsigned long tiempoAnterior = 0;
-  unsigned long intervalo = 10000; // 10 segundos
+// Frecuencia de impresión de datos en puerto serie
+unsigned long tiempoAnterior = 0;
+unsigned long intervalo = 10000; // 10 segundos
 
 void setup() {
-    Serial.begin(115200);
+  Serial.begin(115200);
 
-    pinMode(Vpin, INPUT);
-    voltageSensor.setSensitivity(SENSITIVITY);
+  // Sensor de tensión
+  pinMode(Vpin, INPUT);
+  voltageSensor.setSensitivity(SENSITIVITY);
 
-    Serial.println("Iniciando Ethernet...");
-    
-    Ethernet.init(5);   // CS pin
+  //  Inicialización de conexión Ethernet
+  Serial.println("Iniciando Ethernet...");
+  Ethernet.init(5);   // CS pin
  
-    if (Ethernet.begin(mac)) {
-        Serial.println("DHCP OK!");
-    }else{
-        Serial.println("Configuración DHCP fallida.");
-       
-        if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-          Serial.println("Módulo Ethernet No encontrado. Hardware ausente. Reiniciar.");
-          while (true) {
-            delay(1); // Loop infinito
-          }
+  if (Ethernet.begin(mac)) {
+      Serial.println("DHCP OK!");
+  } else{
+      Serial.println("Configuración DHCP fallida.");
+     
+      if (Ethernet.hardwareStatus() == EthernetNoHardware) {
+        Serial.println("Módulo Ethernet No encontrado. Hardware ausente. Reiniciar.");
+        while (true) {
+          delay(1); // Loop infinito
         }
+      }
         if (Ethernet.linkStatus() == LinkOFF) {
           Serial.println("Cable Ethernet no conectado.");
         }
  
-          IPAddress ip(MYIPADDR);
-          IPAddress dns(MYDNS);
-          IPAddress gw(MYGW);
-          IPAddress sn(MYIPMASK);
-          Ethernet.begin(mac, ip, dns, gw, sn);
-          Serial.println("IP ESTÁTICA OK!");
+      IPAddress ip(MYIPADDR);
+      IPAddress dns(MYDNS);
+      IPAddress gw(MYGW);
+      IPAddress sn(MYIPMASK);
+      Ethernet.begin(mac, ip, dns, gw, sn);
+      Serial.println("IP ESTÁTICA OK!");
     }
-    delay(2000);
+  delay(2000);
  
- 
-    Serial.print("Local IP : ");
-    Serial.println(Ethernet.localIP());
-    Serial.print("Subnet Mask : ");
-    Serial.println(Ethernet.subnetMask());
-    Serial.print("Gateway IP : ");
-    Serial.println(Ethernet.gatewayIP());
-    Serial.print("DNS Server : ");
-    Serial.println(Ethernet.dnsServerIP());
- 
-   Serial.println("Ethernet inicializado correctamente.");
+ // Imprimir datos de conexión
+  Serial.print("Local IP : ");
+  Serial.println(Ethernet.localIP());
+  Serial.print("Subnet Mask : ");
+  Serial.println(Ethernet.subnetMask());
+  Serial.print("Gateway IP : ");
+  Serial.println(Ethernet.gatewayIP());
+  Serial.print("DNS Server : ");
+  Serial.println(Ethernet.dnsServerIP());
 
-  //SNMP
+  // Iniciar SNMP
   snmp.setUDP(&Udp);
   snmp.begin();
 
+  // Direcciónes IOD
   //snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.XX", staticString); // String estática
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.13", &CoreTemp);
@@ -94,13 +100,17 @@ void setup() {
 }
  
 void loop() {
-  client.available(); // Llamado constante
-
-  voltage = voltageSensor.getRmsVoltage();
-  CoreTemp = temperatureRead();
+ // Llamado constante para no cerrar comunicaión Ethernet
+ client.available();
+ 
+ // Lectura de variables
+ voltage = voltageSensor.getRmsVoltage();
+ CoreTemp = temperatureRead();
   
-  snmp.loop(); // Llamado constante
+ // Llamado constante para no cerrar comunicaión SNMP
+ snmp.loop();
 
+ // Impresión de datos por puerto serie
   unsigned long tiempoActual = millis();
     if (tiempoActual - tiempoAnterior >= intervalo) {
         Serial.print(voltage);
@@ -110,5 +120,4 @@ void loop() {
 
         tiempoAnterior = tiempoActual;
     }
-
 }
