@@ -13,6 +13,7 @@
 #include <EthernetENC.h>
 #include <EthernetUdp.h>
 #include <SNMP_Agent.h>
+#include "WiFi.h"
 
 // Archivos Locales
 #include "NetConfig.h"
@@ -46,6 +47,29 @@ unsigned long intervalo = 10000; // 10 segundos
 void setup() {
   Serial.begin(115200);
 
+//---------------------------- Traspaso de MAC --------------------------
+ // Configura estación WiFi
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect(); // Desconectarse, si estuviera conectado
+  delay(100);
+  
+  // Obtener la dirección MAC de ESP32 WiFi
+  byte mac[6];
+  WiFi.macAddress(mac);
+
+  // Esta dirección MAC será asignada al módulo Etheret ENC28J60
+
+  // Mostrar la dirección MAC como cadena hexadecimal
+  Serial.print("Dirección MAC: ");
+  for (int i = 0; i < 6; i++) {
+    Serial.print(mac[i], HEX);
+    if (i != 5) {
+      Serial.print(":");
+    }
+  }
+  Serial.println("");
+//-----------------------------------------------------------------------
+
   // Sensor de tensión
   pinMode(Vpin, INPUT);
   voltageSensor.setSensitivity(SENSITIVITY);
@@ -74,7 +98,7 @@ void setup() {
       IPAddress gw(MYGW);
       IPAddress sn(MYIPMASK);
       Ethernet.begin(mac, ip, dns, gw, sn);
-      Serial.println("IP ESTÁTICA OK!");
+      Serial.println("IP ESTÁTICA CONFIGURADA");
     }
   delay(2000);
  
@@ -96,7 +120,6 @@ void setup() {
   //snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.XX", staticString); // String estática
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.13", &CoreTemp);
-
 }
  
 void loop() {
@@ -114,7 +137,7 @@ void loop() {
   unsigned long tiempoActual = millis();
     if (tiempoActual - tiempoAnterior >= intervalo) {
         Serial.print(voltage);
-        Serial.println(" VRMS");
+        Serial.print(" VRMS - Temperatura OnBoard: ");
         Serial.print(CoreTemp);
         Serial.println(" °C");
 
