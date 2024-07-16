@@ -13,15 +13,25 @@
 #include <EthernetENC.h>
 #include <EthernetUdp.h>
 #include <SNMP_Agent.h>
-#include "WiFi.h"
 
-// Archivos Locales
+#if ESP32
+  // En caso de utilizar ESP32
+  #include <WiFi.h>
+  #define CSpin 5 // Módulo Ethernet
+  #define Vpin 34 // Módulo sensor de tensión
+#elif defined(ESP8266)
+  // En caso de utilizar ESP8266
+  #include <ESP8266WiFi.h>
+  #define CSpin 2 // Módulo Ethernet
+  #define Vpin A0 // Módulo sensor de tensión
+#endif
+
+// Archivo local de configuración
 #include "NetConfig.h"
 
 // Configuración de sensor de tensión
 #include <ZMPT101B.h> // Modelo del sensor
 #define SENSITIVITY 500 //Sensibilidad
-#define Vpin 34 // GPIO pin ESP32
 ZMPT101B voltageSensor(Vpin, 50); // (GPIO Pin, Frecuencia de red en Hz)
 
 // Inicializa libreria de cliente Ethernet
@@ -34,11 +44,10 @@ SNMPAgent snmp = SNMPAgent("public", "private");
 // If we want to change the functionaality of an OID callback later, store them here.
 TimestampCallback* timestampCallbackOID;
 
-//std::string staticString = "ESP32 SNMP funcionando correctamente"; // String estática
+//std::string staticString = "SNMP funcionando correctamente"; // String estática
 
 // Variable a medir
 int voltage; // Tensión AC
-int CoreTemp; // Temperatura interna ESP
 
 // Frecuencia de impresión de datos en puerto serie
 unsigned long tiempoAnterior = 0;
@@ -76,7 +85,7 @@ void setup() {
 
   //  Inicialización de conexión Ethernet
   Serial.println("Iniciando Ethernet...");
-  Ethernet.init(5);   // CS pin
+  Ethernet.init(CSpin);   
  
   if (Ethernet.begin(mac)) {
       Serial.println("DHCP OK!");
@@ -117,9 +126,8 @@ void setup() {
   snmp.begin();
 
   // Direcciónes IOD
-  //snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.XX", staticString); // String estática
+  //snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.13", staticString); // String estática
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
-  snmp.addIntegerHandler(".1.3.6.1.4.1.5.13", &CoreTemp);
 }
  
 void loop() {
@@ -128,7 +136,6 @@ void loop() {
  
  // Lectura de variables
  voltage = voltageSensor.getRmsVoltage();
- CoreTemp = temperatureRead();
   
  // Llamado constante para no cerrar comunicaión SNMP
  snmp.loop();
@@ -137,9 +144,7 @@ void loop() {
   unsigned long tiempoActual = millis();
     if (tiempoActual - tiempoAnterior >= intervalo) {
         Serial.print(voltage);
-        Serial.print(" VRMS - Temperatura OnBoard: ");
-        Serial.print(CoreTemp);
-        Serial.println(" °C");
+        Serial.println(" VRMS");
 
         tiempoAnterior = tiempoActual;
     }
