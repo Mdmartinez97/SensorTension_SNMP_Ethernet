@@ -51,7 +51,7 @@ int voltage; // Tensión AC
 
 // Frecuencia de impresión de datos en puerto serie
 unsigned long tiempoAnterior = 0;
-unsigned long intervalo = 1000; // 10 segundos
+unsigned long intervalo = 10000; // 10 segundos
 
 void setup() {
   Serial.begin(115200);
