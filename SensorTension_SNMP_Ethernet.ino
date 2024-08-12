@@ -31,6 +31,14 @@
   #define Vpin A0 // Módulo sensor de tensión
 #endif
 
+//Apagado display
+const int botonPin = 0;
+bool displayEncendido = true;
+bool estadoBotonAnterior = HIGH;
+unsigned long tiempoUltimoBoton = 0;
+const unsigned long tiempoLimite = 15000; // 15 segundos
+
+
 int eth_flag = 0;
 int vol_ant;
 int vol_act;
@@ -48,6 +56,7 @@ ZMPT101B voltageSensor(Vpin, 50); // (GPIO Pin, Frecuencia de red en Hz)
 // Inicializa librería de cliente Ethernet
 EthernetClient client;
 EthernetUDP Udp;
+EthernetServer server(80);
 
 // Agente SNMP
 SNMPAgent snmp = SNMPAgent("public", "private");
@@ -62,9 +71,12 @@ unsigned long intervalo = 1000; // 1 segundo
 // Inicializar display para SSD1306
 SSD1306Wire display(0x3C, 4, 5); // Dirección 0x3C, SDA=D2 (GPIO 4), SCL=D1 (GPIO 5)
 
+
 void setup() {
   Serial.begin(115200);
   
+  pinMode(botonPin, INPUT_PULLUP); // Configura el pin del botón con resistencia pull-up interna
+
   // Configura estación WiFi
   WiFi.mode(WIFI_STA);
   WiFi.disconnect(); // Desconectarse, si estuviera conectado
@@ -75,7 +87,6 @@ void setup() {
 
   // Inicializar la pantalla
   display.init();
-  display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.clear();
@@ -89,6 +100,8 @@ void setup() {
 
   // Iniciar SNMP
   Iniciar_SNMP();
+
+  tiempoUltimoBoton = millis(); // Inicializa el tiempo de la última interacción
 
 }
 
@@ -124,6 +137,27 @@ void loop() {
       IniciarEthernet(mac);
       Iniciar_SNMP();
     }
+
+    //Encender/Apagar Display
+
+    bool estadoBoton = digitalRead(botonPin);
+
+  // Detectar cambio de estado del botón (de no presionado a presionado)
+  if (estadoBoton == LOW && estadoBotonAnterior == HIGH) {
+    
+    displayEncendido = true; // Asegurar que el display se encienda al presionar el botón
+    tiempoUltimoBoton = millis(); // Reiniciar el temporizador
+    display.displayOn(); // Encender el display
+  }
+  // Verificar si han pasado 15 segundos desde la última interacción
+  if (displayEncendido && (millis() - tiempoUltimoBoton >= tiempoLimite)) {
+    displayEncendido = false;
+    display.displayOff(); // Apagar el display
+  }
+  estadoBotonAnterior = estadoBoton;
+  // Añadir un pequeño retardo para evitar rebotes del botón
+  delay(50);
+  
   }
 
 
@@ -142,91 +176,9 @@ void loop() {
       }
     }
   }
-}
-/**
-void IniciarEthernet() {
-
-  // Inicialización de conexión Ethernet
-  Serial.println("Iniciando Ethernet...");
-  display.clear();
-  Encabezado();
-  display.drawString(0, 15, "Iniciando Ethernet!");
-  display.display();
-  Ethernet.init(CSpin);
-
-  if (Ethernet.begin(mac) != 0) {
-    eth_flag = 1;
-    Serial.println("DHCP OK!");
-    display.drawString(0, 25, "DHCP OK!");
-    display.display();
-  } else {
-    Serial.println("Configuración DHCP fallida.");
-    display.drawString(0, 25, "Configuración DHCP fallida");
-    display.display();
-
-    if (Ethernet.hardwareStatus() == EthernetNoHardware) {
-      Serial.println("Módulo Ethernet No encontrado. Hardware ausente. Reiniciar.");
-      display.drawString(0, 35, "Módulo Ethernet No encontrado. Hardware ausente. Reiniciar");
-      display.display();
-      while (true) {
-        delay(1); // Loop infinito
-      }
-    }
-
-    IPAddress ip(MYIPADDR);
-    IPAddress dns(MYDNS);
-    IPAddress gw(MYGW);
-    IPAddress sn(MYIPMASK);
-    Ethernet.begin(mac, ip, dns, gw, sn);
-    Serial.println("IP ESTÁTICA CONFIGURADA");
-    display.drawString(0, 45, "IP ESTÁTICA CONFIGURADA");
-    display.display();
-  }
-  delay(10000);
-
- // Imprimir datos de conexión
-  Serial.print("Local IP : ");
-  Serial.println(Ethernet.localIP());
-  Serial.print("Subnet Mask : ");
-  Serial.println(Ethernet.subnetMask());
-  Serial.print("Gateway IP : ");
-  Serial.println(Ethernet.gatewayIP());
-  Serial.print("DNS Server : ");
-  Serial.println(Ethernet.dnsServerIP());
-  // Mostrar la dirección MAC como cadena hexadecimal
-  Serial.print("Dirección MAC: ");
-  for (int i = 0; i < 6; i++) {
-    Serial.print(mac[i], HEX);
-    if (i != 5) {
-      Serial.print(":");
-    }
-  }
-  Serial.println("");  
-
-
-  // Configurar el texto
-  display.clear();
-  Encabezado();
-  display.drawString(0, 15, "IP: "+ipToString(Ethernet.localIP()));
-  display.drawString(0, 25, "MAC: "+macToString(mac));
-  display.display();
 
 }
 
-// Función para borrar una línea específica
-void clearLine(int x, int y, int width, int height) {
-  display.setColor(BLACK);
-  display.fillRect(x, y, width, height);
-  display.setColor(WHITE);
-  display.display();
-}
-
-//Encabezado
-void Encabezado(){
-  display.drawString(40, 0, "Sensor IoT");
-  display.drawLine(0, 12, 128, 12);
-}
-**/
 void Iniciar_SNMP(){
     // Iniciar SNMP
   snmp.setUDP(&Udp);
@@ -236,16 +188,4 @@ void Iniciar_SNMP(){
   snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.13", "Prueba"); // String estática
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
 }
-/**
-void resetEthernet() {
-  // Apaga el Ethernet
-  Ethernet.end();
 
-  // Espera un poco para asegurarte de que el módulo se ha apagado
-  delay(1000);
-
-  // Reinicia el Ethernet
-  Ethernet.begin(mac);
-  Serial.println("Ethernet reiniciado");
-}
-**/

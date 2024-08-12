@@ -126,4 +126,6 @@ void resetEthernet() {
   Serial.println("Ethernet reiniciado");
 }
 
+
+
 #endif
