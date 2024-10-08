@@ -123,6 +123,7 @@ void resetEthernet() {
 
   // Reinicia el Ethernet
   Ethernet.begin(mac);
+  display.displayOn();
   Serial.println("Ethernet reiniciado");
 }
 

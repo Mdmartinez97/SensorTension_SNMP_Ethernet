@@ -118,6 +118,7 @@ void loop() {
   vol_act = voltage;
 
   if (Ethernet.linkStatus() == LinkOFF) {
+    display.displayOn();
     display.clear();
     Encabezado();
     display.drawString(0, 15, "Cable Ethernet no conectado");
@@ -127,7 +128,6 @@ void loop() {
     if (eth_flag == 0) {
       // Apaga el Ethernet
       resetEthernet();
-
       display.clear();
       Encabezado();
       display.drawString(0, 15, "Cable Ethernet conectado");
@@ -160,8 +160,7 @@ void loop() {
   
   }
 
-
-  // Impresión de datos por puerto serie
+  //Impresión de datos por puerto serie
   unsigned long tiempoActual = millis();
   if (tiempoActual - tiempoAnterior >= intervalo) {
     Serial.print(voltage);
@@ -180,7 +179,7 @@ void loop() {
 }
 
 void Iniciar_SNMP(){
-    // Iniciar SNMP
+  // Iniciar SNMP
   snmp.setUDP(&Udp);
   snmp.begin();
 
@@ -188,4 +187,7 @@ void Iniciar_SNMP(){
   snmp.addReadOnlyStaticStringHandler(".1.3.6.1.4.1.5.13", "Prueba"); // String estática
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
 }
+
+
+
 
