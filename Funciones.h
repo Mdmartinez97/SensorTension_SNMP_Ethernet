@@ -33,7 +33,7 @@ String ipToString(IPAddress ip) {
 }
 //Encabezado
 void Encabezado(){
-  display.drawString(40, 0, "Sensor IoT");
+  display.drawString(0, 0, NOMBRE);
   display.drawLine(0, 12, 128, 12);
 }
 

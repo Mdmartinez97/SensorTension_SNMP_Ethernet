@@ -122,7 +122,8 @@ void loop() {
     display.clear();
     Encabezado();
     display.drawString(0, 15, "Cable Ethernet no conectado");
-    display.display();
+    ImprimirVoltage();
+    //display.display();
     eth_flag = 0;
   } else {
     if (eth_flag == 0) {
@@ -160,21 +161,7 @@ void loop() {
   
   }
 
-  //Impresión de datos por puerto serie
-  unsigned long tiempoActual = millis();
-  if (tiempoActual - tiempoAnterior >= intervalo) {
-    Serial.print(voltage);
-    Serial.println(" VRMS");
-    tiempoAnterior = tiempoActual;
-    if (eth_flag == 1) {
-      if (vol_act != vol_ant) {
-        vol_ant = vol_act;
-        clearLine(0, 40, 128, 10); // (x, y, ancho, alto)
-        display.drawString(0, 40, "VRMS: " + String(voltage));
-        display.display();
-      }
-    }
-  }
+  ImprimirVoltage();
 
 }
 
@@ -188,6 +175,20 @@ void Iniciar_SNMP(){
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
 }
 
-
+void ImprimirVoltage(){
+  //Impresión de datos por puerto serie y display
+  unsigned long tiempoActual = millis();
+  if (tiempoActual - tiempoAnterior >= intervalo) {
+    Serial.print(voltage);
+    Serial.println(" VRMS");
+    tiempoAnterior = tiempoActual;
+      if (vol_act != vol_ant) {
+        vol_ant = vol_act;
+        clearLine(0, 40, 128, 10); // (x, y, ancho, alto)
+        display.drawString(0, 40, "VRMS: " + String(voltage));
+        display.display();
+      }
+  }
+}
 
 
