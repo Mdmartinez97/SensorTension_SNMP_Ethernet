@@ -1,9 +1,9 @@
 // Configuración IP Fija
-#define MYIPADDR 10,229,1,200
+#define MYIPADDR 192,168,72,5
 #define MYIPMASK 255,255,255,0
 #define MYDNS 10,0,0,120
-#define MYGW 10,229,1,252
-#define NOMBRE "Sensor IoT Multimedios"
+#define MYGW 192,168,72,254
+#define NOMBRE "Sensor IoT Archivo"
 
 /* -------------- Direcciones OID para SNMP -------------
 

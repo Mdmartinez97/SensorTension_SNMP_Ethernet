@@ -121,9 +121,8 @@ void loop() {
     display.displayOn();
     display.clear();
     Encabezado();
-    display.drawString(0, 15, "Cable Ethernet no conectado");
+    display.drawString(0, 50, "Ethernet no conectado");
     ImprimirVoltage();
-    //display.display();
     eth_flag = 0;
   } else {
     if (eth_flag == 0) {
@@ -176,6 +175,8 @@ void Iniciar_SNMP(){
 }
 
 void ImprimirVoltage(){
+  display.drawString(0, 15, "IP: "+ipToString(Ethernet.localIP()));
+  display.drawString(0, 25, "MAC: "+macToString(mac));
   //Impresión de datos por puerto serie y display
   unsigned long tiempoActual = millis();
   if (tiempoActual - tiempoAnterior >= intervalo) {
@@ -190,5 +191,3 @@ void ImprimirVoltage(){
       }
   }
 }
-
-
