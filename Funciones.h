@@ -46,17 +46,6 @@ void IniciarEthernet(byte mac[]) {
   display.drawString(0, 15, "Iniciando Ethernet!");
   display.display();
   Ethernet.init(CSpin);
-
-  if (Ethernet.begin(mac) != 0) {
-    eth_flag = 1;
-    Serial.println("DHCP OK!");
-    display.drawString(0, 25, "DHCP OK!");
-    display.display();
-  } else {
-    Serial.println("Configuración DHCP fallida.");
-    display.drawString(0, 25, "Configuración DHCP fallida");
-    display.display();
-
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
       Serial.println("Módulo Ethernet No encontrado. Hardware ausente. Reiniciar.");
       display.drawString(0, 35, "Módulo Ethernet No encontrado. Hardware ausente. Reiniciar");
@@ -71,11 +60,11 @@ void IniciarEthernet(byte mac[]) {
     IPAddress gw(MYGW);
     IPAddress sn(MYIPMASK);
     Ethernet.begin(mac, ip, dns, gw, sn);
-    Serial.println("IP ESTÁTICA CONFIGURADA");
-    display.drawString(0, 45, "IP ESTÁTICA CONFIGURADA");
+    Serial.println("IP CONFIGURADA");
+    display.drawString(0, 25, "IP CONFIGURADA");
     display.display();
-  }
-  delay(10000);
+  //}
+    delay(5000);
 
  // Imprimir datos de conexión
   Serial.print("Local IP : ");
@@ -112,19 +101,6 @@ void clearLine(int x, int y, int width, int height) {
   display.fillRect(x, y, width, height);
   display.setColor(WHITE);
   display.display();
-}
-
-void resetEthernet() {
-  // Apaga el Ethernet
-  Ethernet.end();
-
-  // Espera un poco para asegurarte de que el módulo se ha apagado
-  delay(1000);
-
-  // Reinicia el Ethernet
-  Ethernet.begin(mac);
-  display.displayOn();
-  Serial.println("Ethernet reiniciado");
 }
 
 #endif

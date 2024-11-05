@@ -36,7 +36,7 @@ const int botonPin = 0;
 bool displayEncendido = true;
 bool estadoBotonAnterior = HIGH;
 unsigned long tiempoUltimoBoton = 0;
-const unsigned long tiempoLimite = 15000; // 15 segundos
+const unsigned long tiempoLimite = 30000; // 30 segundos
 
 
 int eth_flag = 0;
@@ -117,39 +117,31 @@ void loop() {
   voltage = voltageSensor.getRmsVoltage();
   vol_act = voltage;
 
+  // Verificar el estado de la conexión Ethernet
   if (Ethernet.linkStatus() == LinkOFF) {
-    display.displayOn();
-    display.clear();
-    Encabezado();
-    display.drawString(0, 50, "Ethernet no conectado");
-    ImprimirVoltage();
-    eth_flag = 0;
-  } else {
-    if (eth_flag == 0) {
-      // Apaga el Ethernet
-      resetEthernet();
-      display.clear();
-      Encabezado();
-      display.drawString(0, 15, "Cable Ethernet conectado");
-      display.display();
-      eth_flag = 1;
-      // Llamar función Ethernet
-      IniciarEthernet(mac);
-      Iniciar_SNMP();
-    }
+      // Si el Ethernet está desconectado y el flag es 1
+      if (eth_flag == 1) {
+          encenderDisplay();
+      }
+      eth_flag = 0;  // Actualizar el flag a 0
+  } else { // Si el Ethernet está conectado
+      // Si el flag es 0 y no se ha procesado antes
+      if (eth_flag == 0) {
+          encenderDisplay();
+          eth_flag = 1;  // Actualizar el flag a 1
+          clearLine(0, 52, 128, 10);  // Limpiar la línea del display
+      }
+  }
 
-    //Encender/Apagar Display
+  //Encender/Apagar Display
 
-    bool estadoBoton = digitalRead(botonPin);
+  bool estadoBoton = digitalRead(botonPin);
 
   // Detectar cambio de estado del botón (de no presionado a presionado)
   if (estadoBoton == LOW && estadoBotonAnterior == HIGH) {
-    
-    displayEncendido = true; // Asegurar que el display se encienda al presionar el botón
-    tiempoUltimoBoton = millis(); // Reiniciar el temporizador
-    display.displayOn(); // Encender el display
+    encenderDisplay();
   }
-  // Verificar si han pasado 15 segundos desde la última interacción
+  // Verificar si han pasado 30 segundos desde la última interacción
   if (displayEncendido && (millis() - tiempoUltimoBoton >= tiempoLimite)) {
     displayEncendido = false;
     display.displayOff(); // Apagar el display
@@ -157,10 +149,9 @@ void loop() {
   estadoBotonAnterior = estadoBoton;
   // Añadir un pequeño retardo para evitar rebotes del botón
   delay(50);
-  
-  }
+  //}
 
-  ImprimirVoltage();
+  ImprimirDatos();
 
 }
 
@@ -174,7 +165,8 @@ void Iniciar_SNMP(){
   snmp.addIntegerHandler(".1.3.6.1.4.1.5.12", &voltage);
 }
 
-void ImprimirVoltage(){
+
+void ImprimirDatos(){
   display.drawString(0, 15, "IP: "+ipToString(Ethernet.localIP()));
   display.drawString(0, 25, "MAC: "+macToString(mac));
   //Impresión de datos por puerto serie y display
@@ -190,4 +182,15 @@ void ImprimirVoltage(){
         display.display();
       }
   }
+  if (eth_flag ==0){
+    display.drawString(0, 52, "Ethernet no conectado");
+
+  }
+}
+
+// Función para encender el display y reiniciar el temporizador
+void encenderDisplay() {
+    displayEncendido = true;  // Asegura que el display esté encendido
+    tiempoUltimoBoton = millis();  // Reinicia el temporizador
+    display.displayOn();  // Enciende el display
 }
