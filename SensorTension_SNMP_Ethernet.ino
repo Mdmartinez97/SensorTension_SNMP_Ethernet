@@ -38,6 +38,9 @@ bool estadoBotonAnterior = HIGH;
 unsigned long tiempoUltimoBoton = 0;
 const unsigned long tiempoLimite = 30000; // 30 segundos
 
+// Definir una variable para almacenar el tiempo de la última vez que el botón fue presionado
+unsigned long tiempoBotonPresionado = 0;
+bool botonPresionado = false;
 
 int eth_flag = 0;
 int vol_ant;
@@ -133,6 +136,7 @@ void loop() {
       }
   }
 
+/**
   //Encender/Apagar Display
 
   bool estadoBoton = digitalRead(botonPin);
@@ -150,6 +154,54 @@ void loop() {
   // Añadir un pequeño retardo para evitar rebotes del botón
   delay(50);
   //}
+  **/
+
+    // Estado del botón
+  bool estadoBoton = digitalRead(botonPin);
+
+  // Detectar cambio de estado del botón (de no presionado a presionado)
+  if (estadoBoton == LOW && estadoBotonAnterior == HIGH) {
+    // Guardar el tiempo cuando el botón es presionado
+    tiempoBotonPresionado = millis();
+    botonPresionado = true;
+    encenderDisplay();
+  }
+
+  // Si el botón sigue presionado
+  if (estadoBoton == LOW && botonPresionado) {
+    // Calcular cuántos segundos ha estado presionado el botón
+    unsigned long tiempoPresionado = (millis() - tiempoBotonPresionado) / 1000;  // Convertir a segundos
+
+    // Si han pasado 5 segundos y aún no se mostró el mensaje
+    if (tiempoPresionado >= 5) {
+      // Mostrar el mensaje en el display (o en el serial)
+      display.clear();  // Limpiar el display si es necesario
+      display.drawString(0, 20, "Reiniciando...");
+      display.display();
+      delay(1000);
+      ESP.restart();  // Reinicia el ESP8266 de forma inmediata
+      
+      // Enviar al serial si prefieres usar el monitor serial
+      Serial.println("Se reinicio la ESP8266");
+    }
+  }
+
+  // Si el botón se suelta (de presionado a no presionado)
+  if (estadoBoton == HIGH && estadoBotonAnterior == LOW) {
+    botonPresionado = false;  // El botón ya no está presionado
+    // Si se requiere, puedes mostrar el tiempo que estuvo presionado, etc.
+  }
+
+  // Verificar si han pasado 30 segundos desde la última interacción
+  if (displayEncendido && (millis() - tiempoUltimoBoton >= tiempoLimite)) {
+    displayEncendido = false;
+    display.displayOff(); // Apagar el display
+  }
+
+  estadoBotonAnterior = estadoBoton;
+
+  // Añadir un pequeño retardo para evitar rebotes del botón
+  delay(50);
 
   ImprimirDatos();
 
